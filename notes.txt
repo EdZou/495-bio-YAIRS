@@ -1,0 +1,3 @@
+Get inner circle correct: 80, 50
+Get outer circle correct: 59, 63
+Detecting Circles in Images using OpenCV and Hough Circles£ºhttps://www.pyimagesearch.com/2014/07/21/detecting-circles-images-using-opencv-hough-circles/

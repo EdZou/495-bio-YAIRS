@@ -12,8 +12,8 @@ def irisSegment(src):
     # srcBlur = cv2.GaussianBlur(srcGray,(5, 5),0)
     srcBlur = cv2.medianBlur(srcGray, 5)
     # Proceed to apply Hough Circle Transform:
-    circles = cv2.HoughCircles(srcBlur, cv2.HOUGH_GRADIENT,1,20,param1=80,param2=50,minRadius=0,maxRadius=0)
-
+    circles = cv2.HoughCircles(srcBlur, cv2.HOUGH_GRADIENT,1,20,param1=59,param2=63,minRadius=0,maxRadius=0)
+    print(circles)
     circles = np.uint16(np.around(circles))
     for i in circles[0,:]:
         # draw the outer circle
