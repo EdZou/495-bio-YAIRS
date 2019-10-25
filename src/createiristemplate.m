@@ -25,11 +25,11 @@ function [polar_array] = createiristemplate(eyeimage_filename, image_index)
 global DIAGPATH
 DIAGPATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/src/diagnostics/';
 
-name = regexp(eyeimage_filename, '/', 'split')
-name = name{end}
-index = regexp(name, '\.', 'split')
-index = index{1}
-image_prefix = strcat(DIAGPATH, index)
+name = regexp(eyeimage_filename, '/', 'split');
+name = name{end};
+index = regexp(name, '\.', 'split');
+index = index{1};
+image_prefix = strcat(DIAGPATH, index);
 
 %normalisation parameters
 radial_res = 20;

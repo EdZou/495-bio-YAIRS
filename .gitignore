@@ -3,3 +3,6 @@
 /test/*
 /mydataset/*
 /dataset/*
+/src/images/*
+/src/diagnostics/*
+/src/templates/*
