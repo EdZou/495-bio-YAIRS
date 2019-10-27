@@ -18,8 +18,8 @@
 % The University of Western Australia
 % November 2003
 
-% function [template, mask] = createiristemplate(eyeimage_filename, image_index)
-function [polar_array] = createiristemplate(eyeimage_filename, image_index)
+function [template, mask] = createiristemplate(eyeimage_filename, image_index)
+% function [polar_array] = createiristemplate(eyeimage_filename, image_index)
 
 % path for writing diagnostic images
 global DIAGPATH
@@ -105,4 +105,4 @@ imwrite(noise_array,[image_prefix,'-polarnoise.jpg'],'jpg');
 cd(w);
 
 % perform feature encoding
-% [template, mask] = encode(polar_array, noise_array, nscales, minWaveLength, mult, sigmaOnf); 
+[template, mask] = encode(polar_array, noise_array, nscales, minWaveLength, mult, sigmaOnf); 

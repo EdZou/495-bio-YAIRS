@@ -79,8 +79,8 @@ def generateTemplatesMT(tnum, tid, imagesPath, templatesPath):
             image_index, _ = f.split('.')
             template_path = templatesPath + image_index + '-tp.txt'
             print('thread is {0}, task is {1}, total_thread:{2}, total_task:{3}\n'.format(tid, image_index, tnum, total_task))
-            # res = eng.createiristemplate(image_path, '')
-            res = eng.fastTemplate(image_path, '')
+            res = eng.createiristemplate(image_path, '')
+            # res = eng.fastTemplate(image_path, '')
             res = np.array(res)
 
             with open(template_path, 'w') as tf:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     # generateTemplates(IMAGES_PATH, TEMPLATES_PATH)
     threads = []
     for i in range(thread_num):
-        ti = threading.Thread(target=generateTemplatesMT,args=(thread_num, i, TEN_IMAGES_PATH, TEMPLATES_PATH))
+        ti = threading.Thread(target=generateTemplatesMT,args=(thread_num, i, ALL_IMAGES_PATH, TEMPLATES_PATH))
         threads.append(ti)
 
     for t in threads:
