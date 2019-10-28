@@ -13,7 +13,6 @@ DIAGNOSTICS_PATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/sr
 TEMPLATES_PATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/src/templates/'
 
 def list_all_files(rootdir):
-    import os
     _files = []
     l = os.listdir(rootdir)
     for i in range(0,len(l)):
@@ -90,16 +89,81 @@ def generateTemplatesMT(tnum, tid, imagesPath, templatesPath):
                         tf.write(' ')
                     tf.write('\n')
     eng.quit()
+    
+
+def parseMetadata(metadataPath):
+    tmp_res = [{}]
+    res = {}
+    with open(metadataPath) as f:
+        lines = f.readlines()
+        index = 0
+        for line in lines:
+            line = line.strip()
+            if len(line):
+                key, typ, value = line.split('\t')
+                # print('{0} {1} {2}'.format(key, typ, value))
+                tmp_res[index][key] = value
+            else:
+                tmp_res.append({})
+                index += 1
+        for metadata in tmp_res:
+            if 'sequenceid' in metadata:
+                sequenceid = metadata['sequenceid']
+                res[sequenceid] = metadata
+    
+    return res
+
+def parseObj(objPath):
+    metadataPath = ''
+    eyeimagePaths = []
+    filenames = os.listdir(objPath)
+    for filename in filenames:
+        name, subfix = filename.split('.')
+        if subfix == 'txt':
+            metadataPath = objPath+'/'+name+'.'+subfix
+        elif subfix == 'tiff':
+            eyeimagePath = objPath+'/'+name+'.'+subfix
+            eyeimagePaths.append(eyeimagePath)
+    return metadataPath, eyeimagePaths
+
+def parseDataset(datasetPath):
+    # eng = matlab.engine.start_matlab()
+    objPaths = os.listdir(datasetPath)
+    for objPath in objPaths:
+        metadataPath, eyeimagePaths = parseObj(objPath)
+        metadata = parseMetadata(metadata)
+
+def matchImage(eyeimage_1, eyeimage_2):
+    eng = matlab.engine.start_matlab()
+    res = eng.match(eyeimage_1, eyeimage_2)
+    threshold = 0
+    return res <= threshold
 
 if __name__ == "__main__":  
-    thread_num = 4
-    # generateTemplates(IMAGES_PATH, TEMPLATES_PATH)
-    threads = []
-    for i in range(thread_num):
-        ti = threading.Thread(target=generateTemplatesMT,args=(thread_num, i, ALL_IMAGES_PATH, TEMPLATES_PATH))
-        threads.append(ti)
+    # calculate each image using multi-thread
 
-    for t in threads:
-        t.setDaemon(True)
-        t.start()
-    t.join()
+    # thread_num = 4
+    # # generateTemplates(IMAGES_PATH, TEMPLATES_PATH)
+    # threads = []
+    # for i in range(thread_num):
+    #     ti = threading.Thread(target=generateTemplatesMT,args=(thread_num, i, ALL_IMAGES_PATH, TEMPLATES_PATH))
+    #     threads.append(ti)
+
+    # for t in threads:
+    #     t.setDaemon(True)
+    #     t.start()
+    # t.join()
+
+
+
+    # test parse object path(PASS)
+    # mp, ep = parseObjpath('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/mydataset/LG4000-2010-04-27_29/2010-04-27_29/02463')
+    # print(mp),print(ep)
+    # test parse metadata (PASS)
+    # metadata = parseMetadata('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/mydataset/LG4000-2010-04-27_29/2010-04-27_29/02463/02463.txt')
+    # print(metadata['02463d2873']['eye'])
+    # test match on original matlab funciton
+    eye1 = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/demo_dataset/02463/02463d2873.tiff'
+    eye2 = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/demo_dataset/04233/04233d2600.tiff'
+    res = matchImage(eye1, eye2)
+    print(res)
