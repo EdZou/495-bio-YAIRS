@@ -40,12 +40,25 @@ def parseObj(objPath):
             eyeimagePaths.append(eyeimagePath)
     return metadataPath, eyeimagePaths
 
-# def parseDataset(datasetPath):
-#     # eng = matlab.engine.start_matlab()
-#     objPaths = os.listdir(datasetPath)
-#     for objPath in objPaths:
-#         metadataPath, eyeimagePaths = parseObj(objPath)
-#         metadata = parseMetadata(metadata)
+# generate templates and masks for all images in a dataset
+def calculateDataset(datasetPath):
+    progress = 0
+    eng = matlab.engine.start_matlab()
+    # parse the dataset path
+    objPaths = os.listdir(datasetPath)
+    objPaths = list(map(lambda x:datasetPath+'/'+x, objPaths))
+    allEyeImages = []
+    allMetadata = {}
+    for objPath in objPaths:
+        progress += 1
+        print('calculating mat of {0}, {1}/{2}'.format(objPath, progress, len(objPaths)))
+        # parse the metadata and eyeimages paths
+        metadataPath, eyeimagePaths = parseObj(objPath)
+        metadata = parseMetadata(metadataPath)
+        allMetadata = {**allMetadata, **metadata}
+        # get indexes
+        for eyeimagePath in eyeimagePaths: 
+            eng.getTemplate(eyeimagePath)
 
 # get hamming distance of 2 images
 def getHammingDistance(eyeimage_1, eyeimage_2, eng):
@@ -92,14 +105,15 @@ def getHammingDistanceArray(datasetPath):
 
             # record the progress
             progress += 1
-            if progress % 100 == 0:
+            if progress % 10 == 0:
                 print('calculating hd of {0} and {1}, {2}/{3}'.format(index_1, index_2, progress, size*size))
             # update the correct answer
             correctArray[i_1, i_2] = 1 if obj_1 == obj_2 else 0
             # update the hamming array
             # images of different eyes
             if allMetadata[index_1]['eye']!= allMetadata[index_2]['eye']:
-                hammingArray[i_1, i_2] = 1
+                hammingDistance = getHammingDistance(eyeimage_1, eyeimage_2, eng)
+                hammingArray[i_1, i_2] = hammingDistance
             # images of same index
             elif index_1 == index_2:
                 hammingArray[i_1, i_2] = 0
@@ -111,5 +125,18 @@ def getHammingDistanceArray(datasetPath):
             
     # record the hamming distance array 
     # and the 'correct answers'
-    np.savetxt('hamming_30.txt', hammingArray)
-    np.savetxt('correct_30.txt', correctArray)
+    np.savetxt('hamming_7_3.txt', hammingArray)
+    np.savetxt('correct_7_3.txt', correctArray)
+
+def fastTemplate(dataPath):
+    eng = matlab.engine.start_matlab()
+    imagePaths = os.listdir(dataPath)
+    imagePaths = list(map(lambda x: '{0}/{1}'.format(dataPath, x), imagePaths))
+    for i, imagePath in enumerate(imagePaths):
+        print('[Calculating]: {0}, [{1}/{2}]'.format(imagePath, i+1, len(imagePaths)))
+        polar_array = np.array(eng.fastTemplate(imagePath))
+
+        index = imagePath.split('/')[-1].split('.')[0]
+        saveFile = dataPath + '-tp/' + index + '.txt'
+        print(saveFile)
+        np.savetxt(saveFile, polar_array)        
