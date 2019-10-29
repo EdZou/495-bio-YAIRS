@@ -6,17 +6,20 @@ from tqdm import tqdm
 import os
 import pickle
 from scipy.spatial.distance import hamming
+import copy
 
 class Drawfunc(object):
-    def __init__(self, raw, res_dir, mode):
+    def __init__(self, raw, res_dir, mode, hamming):
         super(Drawfunc, self).__init__()
         self.raw = raw
+        if len(raw[0]) != len(raw[1]):
+            raise Exception('test and train data should be in same length!')
         self.mode = mode
+        self.hamming = hamming
         if res_dir == None:
             raise Exception('result directory cannot be None!')
         self.res_dir = os.path.expanduser(res_dir)
-        self.true_score = self.__get_true()
-        self.false_score = self.__get_false()
+        self.score = self.__get_matrix()
 
     def __get_score(self, raw_v, raw_t):
         #raw_v is the verification sample, raw_test is the test sample
@@ -25,12 +28,16 @@ class Drawfunc(object):
             raise Exception('The shape of raw data should be same!')
         raw_v = (np.array(raw_v)*255).astype('uint8')
         raw_t = (np.array(raw_t)*255).astype('uint8')
-        raw_v = np.reshape(raw_v, (-1))
-        raw_t = np.reshape(raw_t, (-1))
+        count = 0
+        total = len(raw_v)*len(raw_v[0])
         
-        res = hamming(raw_v, raw_t)
-        return res
-
+        for i in range(len(raw_v)):
+            for j in range(len(raw_v[i])):
+                if abs(raw_v[i][j]-raw_t[i][j]) <= self.hamming:
+                    count += 1
+        return count/total
+    
+    '''
     def __get_true(self):
         if self.mode:
             res = []
@@ -83,117 +90,156 @@ class Drawfunc(object):
             with open(cpath, 'rb') as file:
                 res = pickle.load(file)
         return res
+    '''
+
+    def __get_matrix(self):
+        #get 220*220 score matrix
+        matrix = []
+        temp = []
+        if self.mode:
+            print(len(self.raw[0]), len(self.raw[1]))
+            pbar = tqdm(total = len(self.raw[0])*len(self.raw[1]), desc = 'Calculating Score Matrix...')
+            for i in range(len(self.raw[0])):
+                for j in range(len(self.raw[1])):
+                    temp.append(self.__get_score(self.raw[0][i], self.raw[1][j]))
+                    pbar.update()
+                matrix.append(temp)
+                temp = []
+            pbar.close()
+            print(matrix)
+            if os.path.exists(self.res_dir) == False:
+                os.makedirs(self.res_dir)
+            cpath = self.res_dir + '\\Score_matrix.p'
+            with open(cpath, 'wb') as file:
+                pickle.dump(matrix, file)
+
+        else:
+            cpath = self.res_dir + '\\Score_matrix.p'
+            with open(cpath, 'rb') as file:
+                matrix = pickle.load(file)
+        return matrix
+            
 
     def Draw_ROC(self):
         true = []
         false = []
-        true_len = len(self.true_score)
-        false_len = len(self.false_score)
+        #build TMR and FMR list
+        for i in range(len(self.score)):
+            for j in range(len(self.score[0])):
+                if i == j:
+                    true.append(self.score[i][j])
+                else:
+                    false.append(self.score[i][j])
+        true_len = len(true)
+        false_len = len(false)
+
+        tmr = []
+        fmr = []
         pbar = tqdm(total = 101, desc = 'Calculating ROC parameters...')
         for i in range(101):
             true_c = 0
             false_c = 0
             standard = 1 - i/100
-            for score in self.true_score:
+            for score in true:
                 if score >= standard:
                     true_c += 1
-            true.append(true_c/true_len)
+            tmr.append(true_c/true_len)
 
-            for score in self.false_score:
+            for score in false:
                 if score >= standard:
                     false_c += 1
-            false.append(false_c/false_len)
+            fmr.append(false_c/false_len)
             pbar.update()
         pbar.close()
         print(true_len)
         print(false_len)
 
-        plt.plot(false, true, '-b', label = 'ROC Curve')
+        plt.plot(fmr, tmr, '-b', label = 'ROC Curve')
         plt.xlabel('FMR')
         plt.ylabel('TMR')
-        #plt.savefig('ROC_Curve.jpg')
+        plt.savefig('ROC_Curve.jpg')
         plt.show()
             
-            
         return
+
+    def Draw_Distribution(self):
+        true = []
+        false = []
+        #build TMR and FMR list
+        for i in range(len(self.score)):
+            for j in range(len(self.score[0])):
+                if i == j:
+                    true.append(self.score[i][j])
+                else:
+                    false.append(self.score[i][j])
+        true_len = len(true) #220
+        false_len = len(false) #48400 - 220
+        print(true_len, false_len)
+        
+        
+        true.sort()
+        false.sort()
+
+        ytrue = []
+        yfalse = []
+
+        tstart = 0
+        fstart = 0
+        
+        for i in range(21):
+            standard = i*0.05
+            tempt = tstart
+            tempf = fstart
+            if tstart < true_len - 1:
+                while true[tstart] <= standard:
+                    tstart += 1
+                    if tstart >= true_len:
+                        break
+            ytrue.append((tstart - tempt)/true_len)
+            if fstart < false_len - 1:
+                while false[fstart] <= standard:
+                    fstart += 1
+                    if fstart >= false_len:
+                        break
+            yfalse.append((fstart - tempf)/false_len)
+
+        x = np.arange(0, 1.05, 0.05)
+        
+        plt.plot(x, ytrue, '-r', label = 'Genuine')
+        plt.plot(x, yfalse, '-b', label = 'Imposter')
+
+
+        plt.title('Distribution')
+        plt.xlabel('Score')
+        plt.ylabel('Frequency')
+
+        plt.xlim(0.0, 1.1)
+        plt.ylim(0.0, 1.0)
+
+        plt.legend()
+        plt.savefig('Distribution.jpg')
+        plt.show()
+        return
+
+    def Draw_CMC(self):
+        #first sort matrix score in the order of descending
+        #then check whether the lowest score has been less than the score of true
+        #find how many false cases should be taken to get the true cases
+        matrix = copy.deepcopy(self.score)
+        for i in range(len(matrix)):
+            matrix[i].sort(reverse = True)
+        x = np.arange(0,len(matrix) + 1)
+        y = [0]
+        for j in range(len(matrix[0])):
+            count = 0
+            for i in range(len(matrix)):
+                if matrix[i][j] <= self.score[i][i]:
+                    count += 1
+            y.append(count/len(matrix))
+
+        plt.plot(x, y, '-b', label = 'CMC Curve')
+        plt.xlabel('CMC')
+        plt.ylabel('RANK')
+        plt.savefig('CMC_Curve.jpg')
+        plt.show()
                 
-
-'''
-x1 = np.array([0.08, 0.09, 0.10, 0.11, 0.12])
-genuine = np.array([0, 1, 3, 1, 0])
-x2 = np.array([0.47, 0.48, 0.49, 0.50, 0.51, 0.52, 0.53])
-imposter = np.array([0, 1, 5, 8, 5, 1, 0])
-'''
-'''
-x = np.arange(0,1.1,0.1)
-y = np.arange(0,1.1,0.1)
-genuine = np.zeros(100)
-imposter = np.zeros(100)
-
-genuine[10] = 0.2
-genuine[11] = 0.8
-genuine[12:] = 1
-
-imposter[50] = 0.3
-imposter[51] = 0.7
-imposter[52] = 0.95
-imposter[53:] = 1
-
-#print(genuine)
-#print(imposter)
-
-xnew = np.zeros(2)
-ynew = np.ones(2)
-ynew[0] = 0
-'''
-#distribution
-'''
-plt.figure()
-
-plt.subplot(1,2,1)
-xnew1 = np.linspace(0.08,0.12,150)
-xnew2 = np.linspace(0.47,0.53,150)
-xnew = np.arange(0,1,1000)
-
-cs1 = interpolate.CubicSpline(x1, genuine)
-cs2 = interpolate.CubicSpline(x2, imposter)
-
-genuine_new = cs1(xnew1)
-imposter_new = cs2(xnew2)
-
-
-plt.plot(xnew1, genuine_new, '-r', label = 'Genuine')
-plt.plot(xnew2, imposter_new, '-b', label = 'Imposter')
-
-
-plt.title('Distribution')
-plt.xlabel('Score')
-plt.ylabel('Frequency')
-
-plt.xlim(0.0, 1.0)
-plt.ylim(0.0, 9.0)
-
-plt.legend()
-
-plt.subplot(1,2,2)
-plt.bar(x1,genuine, width = 0.01, color = 'r', label = 'Genuine')
-plt.bar(x2,imposter, width = 0.01, color = 'b', label = 'Imposter')
-plt.title('Distribution(Histogram)')
-plt.xlabel('Score')
-plt.ylabel('Frequency')
-
-plt.xlim(0.0, 1.0)
-plt.ylim(0.0, 9.0)
-plt.legend()
-'''
-'''
-x = [0.11, 0.47]
-y = [1, 1]
-
-plt.plot(x, y, '-b', label = 'Perfect ROC')
-plt.xlim(0,1)
-plt.xlabel('Score')
-plt.ylabel('TMR')
-#plt.savefig('Distribution.jpg')
-plt.show()
-'''

@@ -25,24 +25,27 @@ python main.py --oneimage_dir hand.jpg --res_dir results --train_mode --process_
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', type = str, default = 'txtdataset')
+parser.add_argument('--test_dir', type = str, default = 'testtxt')
+parser.add_argument('--train_dir', type = str, default = 'traintxt')
 parser.add_argument('--config_dir', type = str, default = 'config')
-parser.add_argument('--final_dir', type = str, default = 'config\final.p')
-parser.add_argument('--data_mode', type = str, choices = ['txt','p', 'final'], default = 'final')
+parser.add_argument('--final_dir', type = str, default = 'config\\final.p')
+parser.add_argument('--data_mode', type = str, choices = ['txt','p'], default = 'p')
 parser.add_argument('--res_dir', type = str, default = 'results')
 parser.add_argument('--train_mode', action = 'store_true', default = False)
+parser.add_argument('--hamming_val', type = int, default = 8)
 
 def main(args):
-    if args.data_mode == 'txt' or args.data_mode == 'final':
-        dl1 = ImageDataset(args.data_dir, args.data_mode, args.config_dir)
+    if args.data_mode == 'txt':
+        dl1 = ImageDataset(args.test_dir, args.train_dir, args.data_mode, args.config_dir)
         data = dl1.Data_loader()
-    if args.data_mode == 'txt' or args.data_mode == 'p':
-        dl2 = ImageDataset(args.data_dir, 'p', args.config_dir)
+    if args.data_mode == 'p':
+        dl2 = ImageDataset(args.test_dir, args.train_dir, args.data_mode, args.final_dir)
         data = dl2.Data_loader()
-    print(len(data), len(data[0]))
 
-    df = Drawfunc(data, args.res_dir, args.train_mode)
+    df = Drawfunc(data, args.res_dir, args.train_mode, args.hamming_val)
     df.Draw_ROC()
+    df.Draw_Distribution()
+    df.Draw_CMC()
 
     '''
     
