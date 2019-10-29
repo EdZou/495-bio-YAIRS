@@ -163,7 +163,7 @@ def drawROC():
     plt.plot(X, Y)
     plt.show()
 
-def drawDistribution():
+# def drawDistribution():
 
 if __name__ == "__main__":  
     # getHammingDistanceArray(DEMO_DATASET)
