@@ -4,6 +4,14 @@ import os
 import numpy as np
 import math
 import threading
+import matplotlib.pyplot as plt
+from tools import *
+
+DEMO_DATASET = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/demo_dataset'
+TINY_DATASET = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/tiny_dataset'
+CLEAN2200_DATASET = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/cleandata/2200'
+CLEAN22002_DATASET = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/cleandata/22002'
+CLEAN4000_DATASET = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/cleandata/4000'
 
 TEN_IMAGES_PATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/mydataset/2008-10'
 ALL_IMAGES_PATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/mydataset/2008-03-11_13'
@@ -53,6 +61,19 @@ def generateTemplates(imagesPath, templatesPath):
                     tf.write('\n')
     eng.quit()
 
+def fastTemplate(dataPath):
+    eng = matlab.engine.start_matlab()
+    imagePaths = os.listdir(dataPath)
+    imagePaths = list(map(lambda x: '{0}/{1}'.format(dataPath, x), imagePaths))
+    for i, imagePath in enumerate(imagePaths):
+        print('[Calculating]: {0}, [{1}/{2}]'.format(imagePath, i+1, len(imagePaths)))
+        polar_array = np.array(eng.fastTemplate(imagePath))
+
+        index = imagePath.split('/')[-1].split('.')[0]
+        saveFile = dataPath + '-tp/' + index + '.txt'
+        print(saveFile)
+        np.savetxt(saveFile, polar_array)        
+
 def generateTemplatesMT(tnum, tid, imagesPath, templatesPath):
     print('{0}/{1}'.format(tid, tnum))
     # get all files in the path
@@ -89,81 +110,61 @@ def generateTemplatesMT(tnum, tid, imagesPath, templatesPath):
                         tf.write(' ')
                     tf.write('\n')
     eng.quit()
-    
 
-def parseMetadata(metadataPath):
-    tmp_res = [{}]
-    res = {}
-    with open(metadataPath) as f:
-        lines = f.readlines()
-        index = 0
-        for line in lines:
-            line = line.strip()
-            if len(line):
-                key, typ, value = line.split('\t')
-                # print('{0} {1} {2}'.format(key, typ, value))
-                tmp_res[index][key] = value
-            else:
-                tmp_res.append({})
-                index += 1
-        for metadata in tmp_res:
-            if 'sequenceid' in metadata:
-                sequenceid = metadata['sequenceid']
-                res[sequenceid] = metadata
-    
-    return res
+# get the TPR and FPR of one given threshold
+def testThreshold(threshold):
+    # print('testing threshold:{0}'.format(threshold))
+    hammingArray = np.loadtxt('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/hamming_30.txt')
+    correctArray = np.loadtxt('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/correct_30.txt')
+    size, size = hammingArray.shape
+    testArray = np.array((size, size))
 
-def parseObj(objPath):
-    metadataPath = ''
-    eyeimagePaths = []
-    filenames = os.listdir(objPath)
-    for filename in filenames:
-        name, subfix = filename.split('.')
-        if subfix == 'txt':
-            metadataPath = objPath+'/'+name+'.'+subfix
-        elif subfix == 'tiff':
-            eyeimagePath = objPath+'/'+name+'.'+subfix
-            eyeimagePaths.append(eyeimagePath)
-    return metadataPath, eyeimagePaths
+    allPositiveNum = 0
+    truePositiveNum = 0
+    trueNegativeNum = 0
+    falsePositiveNum = 0
+    falseNegativeNum = 0
 
-def parseDataset(datasetPath):
-    # eng = matlab.engine.start_matlab()
-    objPaths = os.listdir(datasetPath)
-    for objPath in objPaths:
-        metadataPath, eyeimagePaths = parseObj(objPath)
-        metadata = parseMetadata(metadata)
+    for i in range(size):
+        for j in range(size):
+            correctResult = correctArray[i, j]
 
-def matchImage(eyeimage_1, eyeimage_2):
-    eng = matlab.engine.start_matlab()
-    res = eng.match(eyeimage_1, eyeimage_2)
-    threshold = 0
-    return res <= threshold
+            testResult = 1 if hammingArray[i,j] <= threshold else 0
+
+            truePositive = 1 if (testResult == 1 and correctResult == 1) else 0
+            trueNegative = 1 if (testResult == 0 and correctResult == 0) else 0
+            falsePositive = 1 if (testResult == 1 and correctResult == 0) else 0
+            falseNegative = 1 if (testResult == 0 and correctResult == 1) else 0
+
+            allPositiveNum += testResult
+
+            truePositiveNum += truePositive
+            trueNegativeNum += trueNegative
+            falsePositiveNum += falsePositive
+            falseNegativeNum += falseNegative
+
+    # print(truePositiveNum, falsePositiveNum, allPositiveNum)
+    TPR = truePositiveNum/(truePositiveNum + falseNegativeNum)
+    FPR = falsePositiveNum/(falsePositiveNum + trueNegativeNum)
+    return TPR, FPR 
+            
+def drawROC():
+    X = []
+    Y = []
+    R = []
+    for t in range(0, 1000):
+        threshold = t/1000
+        tp, fp = testThreshold(threshold)
+        # print('Testing {0}, TPR: {1}, FPR:{2}'.format(threshold, tp, fp))
+        X.append(fp)
+        Y.append(tp)
+        R.append([fp, tp])
+    np.savetxt('R.txt', R)
+    plt.plot(X, Y)
+    plt.show()
+
+def drawDistribution():
 
 if __name__ == "__main__":  
-    # calculate each image using multi-thread
-
-    # thread_num = 4
-    # # generateTemplates(IMAGES_PATH, TEMPLATES_PATH)
-    # threads = []
-    # for i in range(thread_num):
-    #     ti = threading.Thread(target=generateTemplatesMT,args=(thread_num, i, ALL_IMAGES_PATH, TEMPLATES_PATH))
-    #     threads.append(ti)
-
-    # for t in threads:
-    #     t.setDaemon(True)
-    #     t.start()
-    # t.join()
-
-
-
-    # test parse object path(PASS)
-    # mp, ep = parseObjpath('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/mydataset/LG4000-2010-04-27_29/2010-04-27_29/02463')
-    # print(mp),print(ep)
-    # test parse metadata (PASS)
-    # metadata = parseMetadata('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/mydataset/LG4000-2010-04-27_29/2010-04-27_29/02463/02463.txt')
-    # print(metadata['02463d2873']['eye'])
-    # test match on original matlab funciton
-    eye1 = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/demo_dataset/02463/02463d2873.tiff'
-    eye2 = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/demo_dataset/04233/04233d2600.tiff'
-    res = matchImage(eye1, eye2)
-    print(res)
+    # getHammingDistanceArray(DEMO_DATASET)
+    drawROC()

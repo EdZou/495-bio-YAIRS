@@ -167,7 +167,8 @@ image(ind1) = 255;
 w = cd;
 cd(DIAGPATH);
 
-imwrite(image,[eyeimage_filename,'-normal.jpg'],'jpg');
+% avoid writing normal image to the raw folder
+% imwrite(image,[eyeimage_filename,'-normal.jpg'],'jpg');
 
 cd(w);
 

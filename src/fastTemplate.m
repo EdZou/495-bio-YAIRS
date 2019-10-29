@@ -19,7 +19,7 @@
 % November 2003
 
 % function [template, mask] = createiristemplate(eyeimage_filename, image_index)
-function [polar_array] = fasttemplate(eyeimage_filename, image_index)
+function [polar_array] = fastTemplate(eyeimage_filename, image_index)
 
     % path for writing diagnostic images
     global DIAGPATH
