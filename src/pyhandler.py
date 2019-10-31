@@ -10,10 +10,6 @@ import paths
 from scipy.interpolate import make_interp_spline, BSpline
 from tools import *
 
-
-
-
-
 # get the TPR and FPR of one given threshold
 def testThreshold(hammingArray, correctArray, threshold):
     # print('testing threshold:{0}'.format(threshold))
@@ -21,11 +17,7 @@ def testThreshold(hammingArray, correctArray, threshold):
     size, size = hammingArray.shape
     testArray = np.array((size, size))
 
-    allPositiveNum = 0
-    truePositiveNum = 0
-    trueNegativeNum = 0
-    falsePositiveNum = 0
-    falseNegativeNum = 0
+    allPositiveNum = truePositiveNum = trueNegativeNum = falsePositiveNum = falseNegativeNum = 0
 
     for i in range(size):
         for j in range(size):
@@ -53,15 +45,12 @@ def testThreshold(hammingArray, correctArray, threshold):
 def drawROC(hammingArray, correctArray):
     X = [] 
     Y = []
-    R = []
     for t in range(0, 1000):
         threshold = t/1000
         tp, fp = testThreshold(hammingArray, correctArray, threshold)
         # print('Testing {0}, TPR: {1}, FPR:{2}'.format(threshold, tp, fp))
         X.append(fp)
         Y.append(tp)
-        R.append([fp, tp])
-    np.savetxt('R.txt', R)
     plt.plot(X, Y)
     plt.show()
 
@@ -90,7 +79,7 @@ def drawDistributions(hammingArray, correctArray, smooth=False):
     # print(genuineDistribution, imposterDistribution)
 
     # draw the plot
-    X = [0.02*i for i in range(intervalNum)]
+    X = [(1/intervalNum)*i for i in range(intervalNum)]
     if smooth:
         Xnew = np.linspace(max(X), min(X), 100)
 
@@ -109,17 +98,53 @@ def drawDistributions(hammingArray, correctArray, smooth=False):
 
     # return genuineDistribution, imposterDistribution
 
+def Draw_CMC(hammingArray):
+    #first sort matrix score in the order of descending
+    #then check whether the lowest score has been less than the score of true
+    #find how many false cases should be taken to get the true cases
+    matrix = hammingArray.tolist()
+    for i in range(len(matrix)):
+        matrix[i].sort()
+    x = np.arange(0,len(matrix) + 1)
+    y = [0]
+    for j in range(len(matrix[0])):
+        count = 0
+        for i in range(len(matrix)):
+            if matrix[i][j] >= hammingArray[i][i]:
+                count += 1
+        y.append(count/len(matrix))
+
+    plt.plot(x, y, '-b', label = 'CMC Curve')
+    plt.ylabel('CMC')
+    plt.xlabel('RANK')
+    plt.show()
 
 if __name__ == "__main__":  
-    parser = argparse.ArgumentParser() 
+    # TODO: parse args from command line
+    # parser = argparse.ArgumentParser() 
 
-    # calculateDataset(PATH_4000)
-    # calculateDataset(PATH_2200)
+    # STEP 0: calculate templates and masks of every images in a given dataset
+    # and write to mat files in /diagnostics 
 
-    # getHammingDistanceArray(TINY_DATASET)
+    # calculateDataset(paths.LG2200_DATASET)
+    # calculateDataset(paths.LG4000_DATASET)
 
-    hammingArray = np.loadtxt('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/hamming_30.txt')
-    correctArray = np.loadtxt('C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/correct_30.txt')
+    # STEP 1: get the HammingDistanceArray (each element is the hd between img1 and img2) 
+    # and save the hamming array and correct array (1 means the same obj, 0 means different) to .txt file
 
-    # drawROC(hammingArray, correctArray)
+    # getHammingDistanceFromCleandata(paths.CLEAN_4000, paths.CLEAN_22002)
+
+    # STEP 2: load hamming array and correct array from file
+
+    tag = tag = 'shift8-8'
+    hammingPath = '{0}{1}_{2}.txt'.format(paths.HAMMING_ARRAY, 220, tag)
+    correctPath = '{0}{1}_{2}.txt'.format(paths.CORRECT_ARRAY, 220, tag)
+    hammingArray = np.loadtxt(hammingPath)
+    correctArray = np.loadtxt(correctPath)
+
+
+    # STEP 3: draw the distribution and the ROC curve
+
+    drawROC(hammingArray, correctArray)
     drawDistributions(hammingArray, correctArray, False)
+    Draw_CMC(hammingArray)

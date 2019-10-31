@@ -28,25 +28,33 @@ function [circleiris, circlepupil, imagewithnoise] = segmentiris(eyeimage)
 
 % define range of pupil & iris radii
 
-%CASIA
-lpupilradius = 28;
+% %CASIA
+% lpupilradius = 28;
+% upupilradius = 75;
+% lirisradius = 80;
+% uirisradius = 150;
+
+% %LIONS
+% lpupilradius = 32;
+% upupilradius = 85;
+% lirisradius = 145;
+% uirisradius = 169;
+
+% T V
+lpupilradius = 8;
 upupilradius = 75;
-lirisradius = 80;
+lirisradius = 60;
 uirisradius = 150;
 
-%    %LIONS
-%    lpupilradius = 32;
-%    upupilradius = 85;
-%    lirisradius = 145;
-%    uirisradius = 169;
-
-
 % define scaling factor to speed up Hough transform
-scaling = 0.4;
+scaling = 0.2;
 
 reflecthres = 240;
 
+% findcircle(image,lradius,uradius,scaling, sigma, hithres, lowthres, vert, horz)
+
 % find the iris boundary
+% [row, col, r] = findcircle(eyeimage, lirisradius, uirisradius, scaling, 2, 0.20, 0.19, 1.00, 0.00);
 [row, col, r] = findcircle(eyeimage, lirisradius, uirisradius, scaling, 2, 0.20, 0.19, 1.00, 0.00);
 
 circleiris = [row col r];
@@ -83,7 +91,8 @@ end
 imagepupil = eyeimage( irl:iru,icl:icu);
 
 %find pupil boundary
-[rowp, colp, r] = findcircle(imagepupil, lpupilradius, upupilradius ,0.6,2,0.25,0.25,1.00,1.00);
+% [rowp, colp, r] = findcircle(imagepupil, lpupilradius, upupilradius ,0.6,2,0.25,0.25,1.00,1.00);
+[rowp, colp, r] = findcircle(imagepupil, lpupilradius, upupilradius ,0.6 ,2,0.25,0.25,1.00,1.00);
 
 rowp = double(rowp);
 colp = double(colp);
@@ -141,6 +150,6 @@ if size(lines,1) > 0
 end
 
 %For CASIA, eliminate eyelashes by thresholding
-ref = eyeimage < 100;
+ref = eyeimage < 45;
 coords = find(ref==1);
 imagewithnoise(coords) = NaN;

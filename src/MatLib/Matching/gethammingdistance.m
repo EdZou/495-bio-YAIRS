@@ -35,7 +35,7 @@ mask2 = logical(mask2);
 hd = NaN;
 
 % shift template left and right, use the lowest Hamming distance
-for shifts=-8:8
+for shifts=-12:12
     
     template1s = shiftbits(template1, shifts,scales);
     mask1s = shiftbits(mask1, shifts,scales);
@@ -54,7 +54,7 @@ for shifts=-8:8
     
     if totalbits == 0
         
-        hd = NaN;
+        hd = 1;
         
     else
         

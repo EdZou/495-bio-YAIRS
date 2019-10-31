@@ -23,7 +23,7 @@ function [template, mask] = getTemplate(eyeimage_filename, image_index)
 
 % path for writing diagnostic images
 global DIAGPATH
-DIAGPATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/src/diagnostics/';
+DIAGPATH = 'C:/Users/Donnie/Desktop/NU/EE395_Biometrics/495-bio-YAIRS/src/mats/TV/';
 
 name = regexp(eyeimage_filename, '/', 'split');
 name = name{end};
@@ -86,10 +86,10 @@ imagewithnoise2(ind1) = 255;
 imagewithcircles(ind2) = 255;
 imagewithcircles(ind1) = 255;
 w = cd;
-% cd(DIAGPATH);
-% imwrite(imagewithnoise2,[image_prefix,'-noise.jpg'],'jpg');
-% imwrite(imagewithcircles,[image_prefix,'-segmented.jpg'],'jpg');
-% cd(w);
+cd(DIAGPATH);
+imwrite(imagewithnoise2,[image_prefix,'-noise.jpg'],'jpg');
+imwrite(imagewithcircles,[image_prefix,'-segmented.jpg'],'jpg');
+cd(w);
 
 % perform normalisation
 
@@ -99,10 +99,10 @@ w = cd;
 
 % WRITE NORMALISED PATTERN, AND NOISE PATTERN
 w = cd;
-% cd(DIAGPATH);
-% imwrite(polar_array,[image_prefix,'-polar.jpg'],'jpg');
-% imwrite(noise_array,[image_prefix,'-polarnoise.jpg'],'jpg');
-% cd(w);
+cd(DIAGPATH);
+imwrite(polar_array,[image_prefix,'-polar.jpg'],'jpg');
+imwrite(noise_array,[image_prefix,'-polarnoise.jpg'],'jpg');
+cd(w);
 
 % perform feature encoding
 [template, mask] = encode(polar_array, noise_array, nscales, minWaveLength, mult, sigmaOnf); 

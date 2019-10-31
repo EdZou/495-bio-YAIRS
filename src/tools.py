@@ -3,6 +3,7 @@ import os
 import numpy as np
 import math
 import threading
+import paths
 
 # parse the txt of a metadata file
 def parseMetadata(metadataPath):
@@ -61,8 +62,9 @@ def calculateDataset(datasetPath):
             eng.getTemplate(eyeimagePath)
 
 # get hamming distance of 2 images
-def getHammingDistance(eyeimage_1, eyeimage_2, eng):
-    res = eng.match(eyeimage_1, eyeimage_2)
+def getHammingDistance(eyeimage_1, eyeimage_2):
+    eng = matlab.engine.start_matlab()
+    res = eng.getHD(eyeimage_1, eyeimage_2)
     return res
 
 # get all hamming distances of images in a dataset
@@ -112,21 +114,111 @@ def getHammingDistanceArray(datasetPath):
             # update the hamming array
             # images of different eyes
             if allMetadata[index_1]['eye']!= allMetadata[index_2]['eye']:
-                hammingDistance = getHammingDistance(eyeimage_1, eyeimage_2, eng)
+                hammingDistance = eng.getHD(eyeimage_1, eyeimage_2)
                 hammingArray[i_1, i_2] = hammingDistance
             # images of same index
             elif index_1 == index_2:
                 hammingArray[i_1, i_2] = 0
             # images need to calculate
             elif hammingArray[i_1, i_2] == 1:
-                hammingDistance = getHammingDistance(eyeimage_1, eyeimage_2, eng)
+                hammingDistance = eng.getHD(eyeimage_1, eyeimage_2)
                 hammingArray[i_1, i_2] = hammingDistance
                 # print(hammingDistance)
             
     # record the hamming distance array 
     # and the 'correct answers'
-    np.savetxt('hamming_7_3.txt', hammingArray)
-    np.savetxt('correct_7_3.txt', correctArray)
+    tag = 'shift20-20'
+    np.savetxt('{0}{1}_{2}.txt'.format(paths.HAMMING_ARRAY, size, tag), hammingArray)
+    np.savetxt('{0}{1}_{2}.txt'.format(paths.CORRECT_ARRAY, size, tag), correctArray)
+
+def getHammingDistanceFromCleandata(cleandataPath):
+    # parse the dataset path
+    eyeimagePaths = os.listdir(cleandataPath)
+    allEyeImages = []
+    for eyeimagePath in eyeimagePaths:
+        allEyeImages.append(cleandataPath+'/'+eyeimagePath)
+
+    # initialize
+    size = len(allEyeImages)
+    indexes = []
+    hammingArray = np.ones((size, size))
+    correctArray = np.zeros((size, size))
+    eng = matlab.engine.start_matlab()
+    progress = 0
+
+    # calculate all images pair
+    for i_1, eyeimage_1 in enumerate(allEyeImages):
+        # record the index og images
+        index_1 = eyeimage_1.split('/')[-1].split('.')[0]
+        obj_1 = index_1.split('d')[0]
+        indexes.append(index_1)
+        # calculate the hamming distance of each pair of images
+        for i_2, eyeimage_2 in enumerate(allEyeImages):
+            index_2 = eyeimage_2.split('/')[-1].split('.')[0]
+            obj_2 = index_2.split('d')[0]
+
+            # record the progress
+            progress += 1
+            if progress % 10 == 0:
+                print('calculating hd of {0} and {1}, {2}/{3}'.format(index_1, index_2, progress, size*size))
+            # update the correct answer
+            correctArray[i_1, i_2] = 1 if obj_1 == obj_2 else 0
+            # update the hamming array
+            # images of different eyes
+            # images of same index
+            if index_1 == index_2:
+                hammingArray[i_1, i_2] = 0
+            # images need to calculate
+            elif hammingArray[i_1, i_2] == 1:
+                hammingDistance = eng.getHD(eyeimage_1, eyeimage_2)
+                hammingArray[i_1, i_2] = hammingDistance
+                # print(hammingDistance)
+            
+    # record the hamming distance array 
+    # and the 'correct answers'
+    tag = 'shift8-8'
+    np.savetxt('{0}{1}_{2}.txt'.format(paths.HAMMING_ARRAY, size, tag), hammingArray)
+    np.savetxt('{0}{1}_{2}.txt'.format(paths.CORRECT_ARRAY, size, tag), correctArray)
+
+def getHammingDistanceFromCleandata(galleryPath, testPath):
+    galleryImagePaths = os.listdir(galleryPath)
+    testImagePaths = os.listdir(testPath)
+    
+    galleryImagePaths = list(map(lambda x: galleryPath+'/'+x, galleryImagePaths))
+    testImagePaths = list(map(lambda x:testPath+'/'+x, testImagePaths))
+
+    # initialize
+    size = len(galleryImagePaths)
+    indexes = []
+    hammingArray = np.ones((size, size))
+    correctArray = np.zeros((size, size))
+    eng = matlab.engine.start_matlab()
+    progress = 0
+
+    # calculate all images pair
+    for i_1, eyeimage_1 in enumerate(testImagePaths):
+        # record the index og images
+        index_1 = eyeimage_1.split('/')[-1].split('.')[0]
+        obj_1 = index_1.split('d')[0]
+        indexes.append(index_1)
+        # calculate the hamming distance of each pair of images
+        for i_2, eyeimage_2 in enumerate(galleryImagePaths):
+            index_2 = eyeimage_2.split('/')[-1].split('.')[0]
+            obj_2 = index_2.split('d')[0]
+
+            # record the progress
+            progress += 1
+            if progress % 1 == 0:
+                print('calculating hd of {0} and {1}, {2}/{3}'.format(index_1, index_2, progress, size*size))
+            # update the correct answer
+            correctArray[i_1, i_2] = 1 if obj_1 == obj_2 else 0
+            # update the hamming array
+            hammingDistance = eng.getHD(eyeimage_1, eyeimage_2)
+            hammingArray[i_1, i_2] = hammingDistance
+            print(hammingDistance)
+    tag = 'shift8-8'
+    np.savetxt('{0}{1}_{2}.txt'.format(paths.HAMMING_ARRAY, size, tag), hammingArray)
+    np.savetxt('{0}{1}_{2}.txt'.format(paths.CORRECT_ARRAY, size, tag), correctArray)
 
 def fastTemplate(dataPath):
     eng = matlab.engine.start_matlab()
